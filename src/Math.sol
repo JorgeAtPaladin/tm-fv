@@ -1,3 +1,4 @@
+// STRICTLY UNLICENSED. DO NOT USE THIS CODE.
 contract Math {
     function mostSignificantBit(uint256 x) public pure returns (uint256 msb) {
         assembly {
