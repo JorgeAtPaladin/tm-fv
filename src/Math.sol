@@ -1,5 +1,6 @@
 // STRICTLY UNLICENSED. DO NOT USE THIS CODE.
 contract Math {
+    uint256 internal constant MAX_INT256 = 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
     function mostSignificantBit(uint256 x) public pure returns (uint256 msb) {
         assembly {
             let n := mul(128, gt(x, 0xffffffffffffffffffffffffffffffff))
@@ -142,6 +143,15 @@ contract Math {
         }
     }
 
+    function addDelta(uint256 x, int256 delta) public pure returns (uint256 success, uint256 y) {
+        assembly {
+            y := add(x, delta)
+
+            success := iszero(or(gt(x, MAX_INT256), gt(y, MAX_INT256)))
+        }
+    }
+
+
 
         function sqrt512(uint256 x0, uint256 x1, bool roundUp) public pure returns (uint256 s) {
         if (x1 == 0) return sqrt(x0, roundUp);
@@ -224,6 +234,49 @@ contract Math {
             s := add(s, iszero(or(eq(mul(s, s), mx0), iszero(roundUp)))) // round up if necessary
         }
     }
+    function sqrtUni(uint y) public pure returns (uint z) {
+        if (y > 3) {
+            z = y;
+            uint x = y / 2 + 1;
+            while (x < z) {
+                z = x;
+                x = (y / x + x) / 2;
+            }
+        } else if (y != 0) {
+            z = 1;
+        }
+    }
+
+        function min(uint256 x, uint256 y) public pure returns (uint256 r) {
+        assembly {
+            r := xor(y, mul(xor(x, y), lt(x, y)))
+        }
+    }
+
+    /**
+     * @notice Returns the maximum of two numbers
+     * @param x The first number
+     * @param y The second number
+     * @return r The maximum of the two numbers
+     */
+    function max(uint256 x, uint256 y) public pure returns (uint256 r) {
+        assembly {
+            r := xor(y, mul(xor(x, y), gt(x, y)))
+        }
+    }
+
+    /**
+     * @notice Returns the absolute value of x
+     * @param x The number to find the absolute value of
+     * @return r The absolute value of x
+     */
+    function abs(int256 x) public pure returns (uint256 r) {
+        assembly {
+            let mask := sar(255, x)
+            r := xor(add(x, mask), mask)
+        }
+    }
+
 
     // /**
     //  * @notice Calculates the square root of x
@@ -257,7 +310,7 @@ contract Math {
     //     if (y1 > 0 || y0 > 3) {
     //         (z0, z1) = (y0, y1);
     //         (uint256 x0, uint256 x1) = div512(y0, y1, 0, 2);
-    //         (x0, x1) = add512(0, 1, x0, x1);
+    //         (x0, x1) = add512    (0, 1, x0, x1);
     //         while (x1 < z1 || (x1 == z1 && x0 < z0)) {
     //             (z0, z1) = (x0, x1);
     //             (uint256 t0, uint256 t1) = div512(y0, y1, x0, x1);
@@ -270,7 +323,7 @@ contract Math {
     // }
 
     function div(uint256 x, uint256 y, bool roundUp) public pure returns (uint256 z) {
-        if (y == 0) revert();
+        assert (y != 0);
 
         assembly {
             z := add(div(x, y), iszero(or(iszero(mod(x, y)), iszero(roundUp))))
@@ -363,18 +416,20 @@ contract Math {
             z0 := mul(x, y)
             z1 := sub(sub(mm, z0), lt(mm, z0))
         }
-    }
+    } 
 
-    function add512(uint256 x0, uint256 x1, uint256 y0, uint256 y1) public pure returns (uint256 z0, uint256 z1) {
-        uint256 success;
+    function add512(uint256 x0, uint256 x1, uint256 y0, uint256 y1) public pure returns (uint256 success, uint256 z0, uint256 z1) {
 
         assembly {
-            z0 := add(x0, y0)
-            z1 := add(add(x1, y1), lt(z0, x0))
+            let rz1 := add(x1, y1)
 
-            success := or(gt(z1, x1), iszero(y1))
+        z0 := add(x0, y0)
+        z1 := add(rz1, lt(z0, x0))
+
+        success := iszero(or(lt(rz1, x1), lt(z1, rz1)))
+
         }
 
-        if (success == 0) revert ();
     }
+
 }
